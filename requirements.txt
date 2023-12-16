@@ -1,0 +1,10 @@
+numpy
+pandas
+matplotlib
+kaggle
+torch
+torchvision
+torchaudio
+pytorch-lightning
+wandb
+tqdm
