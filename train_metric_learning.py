@@ -126,6 +126,16 @@ class MetricLearningModel(pl.LightningModule):
                 # multiple of "trainer.check_val_every_n_epoch".
             }
         }
+    def forward(self, imgs):
+        logits = self.model(imgs)
+        return logits
+    def register_emb_hook(self, hook):
+        def forward_pre_hook(m, inputs):
+            inpt = inputs[0]
+            hook(inpt)
+            return inpt
+        return self.model.fc.register_forward_pre_hook(forward_pre_hook)
+
 
 
 if __name__ == "__main__":

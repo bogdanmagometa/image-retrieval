@@ -1,7 +1,7 @@
 import wandb
 
 import os
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable
 
 import numpy as np
 import pandas as pd
@@ -111,6 +111,15 @@ class ClassificationModel(pl.LightningModule):
             }
         }
 
+    def forward(self, imgs):
+        logits = self.model(imgs)
+        return logits
+    def register_emb_hook(self, hook: Callable[[torch.Tensor], None]):
+        def forward_pre_hook(m, inputs):
+            inpt = inputs[0]
+            hook(inpt)
+            return inpt
+        return self.model.fc.register_forward_pre_hook(forward_pre_hook)
 
 if __name__ == "__main__":
     data = pd.read_csv('./imaterialist-fashion-2020-fgvc7/train.csv')
@@ -131,14 +140,14 @@ if __name__ == "__main__":
     dataset = MultiLabelDataset(data, transform=transforms, image_dir='./imaterialist-fashion-2020-fgvc7/train')
     train_dataset, val_dataset = random_split(dataset, [0.9, 0.1], generator=torch.Generator().manual_seed(42))
 
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, drop_last=True, num_workers=5)
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, drop_last=True, num_workers=5)
     # train_loader = DataLoader(Subset(train_dataset, range(128 * 2)), batch_size=64, shuffle=True, drop_last=True, num_workers=6)
-    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False, drop_last=False, num_workers=5)
+    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, drop_last=False, num_workers=5)
     # val_loader = DataLoader(Subset(train_dataset, range(128 * 3)), batch_size=64, shuffle=False, drop_last=False, num_workers=6)
 
     classification_model = ClassificationModel()
 
-    name = 'resnet18-fine'
+    name = 'resnet18-fine2'
 
     wandb_logger = pl.loggers.WandbLogger(project='image-retrieval-classification', name=name, group='finetune-classication', resume='never', offline=False)
     trainer = pl.Trainer(
@@ -149,6 +158,5 @@ if __name__ == "__main__":
             pl.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.005, patience=5, verbose=False, mode="min"),
         ],
         log_every_n_steps=10,
-        accumulate_grad_batches=2
     )
     trainer.fit(model=classification_model, train_dataloaders=train_loader, val_dataloaders=val_loader)

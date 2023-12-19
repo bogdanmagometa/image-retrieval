@@ -9,3 +9,4 @@ pytorch-lightning
 wandb
 tqdm
 Pillow
+segmentation-models-pytorch
